@@ -1,0 +1,8 @@
+
+LRU
+write 0 1
+read 8
+read 16 
+read 24
+read 32
+quit

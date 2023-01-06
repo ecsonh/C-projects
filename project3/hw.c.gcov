@@ -1,0 +1,251 @@
+        -:    0:Source:hw.c
+        -:    0:Graph:hw.gcno
+        -:    0:Data:hw.gcda
+        -:    0:Runs:4
+        -:    0:Programs:1
+        -:    1://Sharvin Joshi, sharvimj, 49481100
+        -:    2://ShaoCheng Hsu, ecsonh, 79817999
+        -:    3:#include <stdio.h>
+        -:    4:#include <string.h>
+        -:    5:#include <stdlib.h>
+        -:    6:int global_counter = 0;
+        -:    7:
+        -:    8:struct page{//each page has 8 addresses, in both virtual and main memory
+        -:    9:	int addresses[8];
+        -:   10:};
+        -:   11:
+        -:   12:struct PageTableEntries {
+        -:   13:    int v_page_num, valid_bit, dirty_bit, page_num, time_stamp;
+        -:   14:};
+        -:   15:
+        -:   16:struct physical_memory{
+        -:   17:	struct page main_mem[4];
+        -:   18:};
+        -:   19:
+        -:   20:struct virtual_memory{
+        -:   21:	struct page virtual_mem[16];
+        -:   22:};
+        -:   23:
+        -:   24:
+        -:   25:
+        -:   26:void increment_counters(struct PageTableEntries pageTable[16]);
+       19:   27:void increment_counters(struct PageTableEntries pageTable[16]){
+        -:   28:	int i;
+      323:   29:	for (i=0;i<16;i++){
+      304:   30:		if(pageTable[i].valid_bit){pageTable[i].time_stamp++;}//all pages that are in main memory have their time stamp incremented after valid input
+        -:   31:	}
+       19:   32:	global_counter++; //global counter will always increase after every valid input
+       19:   33:}
+        -:   34:
+        4:   35:int main(int argc, char *argv[]){
+        4:   36:	int use_LRU = 0; //boolean to know if we use LRU or FIFO
+        4:   37:	if(argc == 2)
+        -:   38:	{
+        3:   39:		if(!(strcmp(argv[1],"LRU"))){use_LRU=1;}
+        -:   40:	}
+        -:   41:	
+        -:   42:	//create virtual memory
+        -:   43:	struct virtual_memory VM;
+        -:   44:	int i;
+       68:   45:	for(i=0;i<16;i++){
+        -:   46:		int x;
+      576:   47:		for(x=0;x<8;x++){
+      512:   48:			VM.virtual_mem[i].addresses[x] = -1;//initilize all values to be -1
+        -:   49:		}
+        -:   50:	}
+        -:   51:	
+        -:   52:	//need to declare and initilize pageTable
+        -:   53:	struct PageTableEntries pageTable[16];
+       68:   54:	for (i=0;i<16;i++){
+       64:   55:		pageTable[i].v_page_num = i;//virtual page num is same as index of this pageTable array
+       64:   56:		pageTable[i].valid_bit =0; //no pages start in main memory
+       64:   57:		pageTable[i].dirty_bit = 0;//no pages are dirty at the start
+       64:   58:		pageTable[i].page_num = i; //page num is same as v_page_num when not valid, otherwise they are 0-3
+       64:   59:		pageTable[i].time_stamp = 0;//counter that should increment for every page in main mem after commands
+        -:   60:	}
+        -:   61:	
+        -:   62:	//create main memory
+        -:   63:	struct physical_memory physical_mem;
+       20:   64:	for(i=0;i<4;i++){
+        -:   65:		int x;
+      144:   66:		for(x=0;x<8;x++){
+      128:   67:			physical_mem.main_mem[i].addresses[x] = -1;//initilize all values to be -1
+        -:   68:		}
+        -:   69:	}
+        -:   70:	//physical_mem.main_mem[0].addresses[1] = 16;
+        -:   71:	
+        -:   72:	char input_str[50];
+        -:   73:	char* input_array[4]; //need to declare only once
+        -:   74:	
+        -:   75:	while(1){
+       27:   76:		printf("> ");
+       27:   77:		fgets(input_str,sizeof(input_str),stdin);
+       27:   78:		char* token = strtok(input_str," \n");//
+       27:   79:		input_array[0] = token;
+       27:   80:		int x = 1;
+      115:   81:		while(token != NULL){//argument array will contain null at the end!
+       61:   82:		token = strtok(NULL," \n");
+       61:   83:		input_array[x]=token;
+       61:   84:		x++;
+        -:   85:		}
+       27:   86:		if(!strcmp(input_array[0],"quit")){
+        4:   87:			exit(0);
+        -:   88:		}
+       23:   89:		else if(!strcmp(input_array[0],"read"))
+        -:   90:		{
+        8:   91:			int read_address = atoi(input_array[1]);
+        8:   92:			int page_number = read_address/8; //should return whole number
+        8:   93:			int index_offset = read_address%8;//should return index of address in page
+        8:   94:			if(use_LRU == 1){
+        4:   95:				pageTable[page_number].time_stamp = 0;}
+        -:   96:			//find out if page is in physical_mem using valid bit
+        8:   97:			if(pageTable[page_number].valid_bit){//if page is in main memory
+        -:   98:				// go to page in pageTable, get physical_mem page_num, and print value at specifc address of page 
+        1:   99:				printf("%d\n",physical_mem.main_mem[pageTable[page_number].page_num].addresses[index_offset]); 
+        1:  100:				increment_counters(pageTable);
+        -:  101:			}
+        -:  102:			else{
+        7:  103:				printf("A Page Fault Has Occurred\n");//after this, move page into main memory either open spot or replace a victim page
+        7:  104:				int need_to_replace_page = 1;
+        7:  105:				int main_mem_spots[4] = {0,1,2,3};
+      119:  106:				for(i=0;i<16;i++){//if any number 0-3 remains, that's an open slot in main memory for a page
+      112:  107:					if(pageTable[i].valid_bit && pageTable[i].page_num==0){main_mem_spots[0] = -1;}
+      106:  108:					else if(pageTable[i].valid_bit && pageTable[i].page_num==1){main_mem_spots[1] = -1;}
+      102:  109:					else if(pageTable[i].valid_bit && pageTable[i].page_num==2){main_mem_spots[2] = -1;}
+      100:  110:					else if(pageTable[i].valid_bit && pageTable[i].page_num==3){main_mem_spots[3] = -1;}
+        -:  111:				}
+       20:  112:				for (i=0;i<4;i++){
+       19:  113:					if (main_mem_spots[i] != -1){ //if there was a spot remaining in main memory; set page num to this "i"
+        6:  114:						pageTable[page_number].page_num = i;//set page_num
+        6:  115:						pageTable[page_number].valid_bit = 1; //set valid bit to true
+        6:  116:						physical_mem.main_mem[i] = VM.virtual_mem[page_number]; //copy page from VM into main memory
+        -:  117:						//physical_mem.main_mem[i].addresses[1] = 16;
+        6:  118:						need_to_replace_page = 0;//only if page could be placed into empty slot in main memory
+        -:  119:						//printf("there was space in main memory\n");
+        6:  120:						printf("%d\n",physical_mem.main_mem[pageTable[page_number].page_num].addresses[index_offset]);
+        6:  121:						increment_counters(pageTable);
+        6:  122:						break;
+        -:  123:					}
+        -:  124:				}
+        7:  125:				if (need_to_replace_page){
+        -:  126:					//FIFO or LRU
+        -:  127:					
+        -:  128:					int i;
+        -:  129:					int virtual_page_num;
+        -:  130:					int index_to_replace;//the index in main memory to replace (0,1,2,3)
+        1:  131:					int longest_time_stamp = 0;
+       17:  132:					for(i=0;i<16;i++){ //need to iterate through all pages in pageTable, see which valid page has the largest time
+       16:  133:						if (pageTable[i].valid_bit && pageTable[i].time_stamp > longest_time_stamp){
+        1:  134:							longest_time_stamp = pageTable[i].time_stamp;
+        1:  135:							index_to_replace = pageTable[i].page_num;
+        1:  136:							virtual_page_num = i; //the index of page in pageTable; ALSO MATCHES INDEX OF INT ARRAY IN VM.virtual_mem;
+        -:  137:						}
+        -:  138:					}
+        1:  139:					if (pageTable[virtual_page_num].dirty_bit){ //IF page copy was dirtied in the main memory, need to copy it into virtual memory first
+        1:  140:						pageTable[virtual_page_num].dirty_bit = 0;//we are gonna take care of it
+        -:  141:						//set virtual_memory page to be equal to page in physical_mem, so that the changes are kept
+        1:  142:						VM.virtual_mem[virtual_page_num]= physical_mem.main_mem[index_to_replace];  
+        -:  143:					}
+        1:  144:					pageTable[virtual_page_num].valid_bit = 0; //we are taking this page out of main memory
+        1:  145:					pageTable[virtual_page_num].page_num = pageTable[virtual_page_num].v_page_num; //set this back to v_page_num
+        1:  146:					pageTable[virtual_page_num].time_stamp = 0; //only pages in main memory have a time stamp greater than one (unless LRU and page just used)
+        -:  147:					
+        1:  148:					pageTable[page_number].valid_bit = 1; //we are putting this page into main memory
+        1:  149:					pageTable[page_number].page_num = index_to_replace; //page_num is index of open spot in main memory (still needs to be set to the same data tho)
+        1:  150:					physical_mem.main_mem[index_to_replace] = VM.virtual_mem[page_number]; //set main memory index to be this page
+        1:  151:					printf("%d\n",physical_mem.main_mem[pageTable[page_number].page_num].addresses[index_offset]);
+        -:  152:				}
+        -:  153:					
+        -:  154:					//else{}//Implemet LRU FIRST
+        -:  155:				
+        -:  156:			}
+        -:  157:		}
+       15:  158:		else if(!strcmp(input_array[0],"write")){
+       12:  159:			int write_address = atoi(input_array[1]);
+       12:  160:			int page_number = write_address/8; //should return whole number
+       12:  161:			int index_offset = write_address%8;//should return index of address in page
+       12:  162:			if(use_LRU == 1)
+        -:  163:			{
+        6:  164:				pageTable[page_number].time_stamp = 0;
+        -:  165:			}
+       12:  166:			if (pageTable[page_number].valid_bit){//if page of address in main memory
+        4:  167:				physical_mem.main_mem[pageTable[page_number].page_num].addresses[index_offset] = atoi(input_array[2]); //alter the data here
+        4:  168:				pageTable[page_number].dirty_bit = 1; //we changed a value in the page, must say its dirtied
+        4:  169:				increment_counters(pageTable);
+        -:  170:			}
+        -:  171:			else{//if not in physical memory
+        8:  172:				printf("A Page Fault Has Occurred\n");
+        8:  173:				int need_to_replace_page = 1;
+        8:  174:				int main_mem_spots[4] = {0,1,2,3};
+      136:  175:				for(i=0;i<16;i++){//if any number 0-3 remains, that's an open slot in main memory for a page
+      128:  176:					if(pageTable[i].valid_bit && pageTable[i].page_num==0){main_mem_spots[0] = -1;}
+      123:  177:					else if(pageTable[i].valid_bit && pageTable[i].page_num==1){main_mem_spots[1] = -1;}
+      120:  178:					else if(pageTable[i].valid_bit && pageTable[i].page_num==2){main_mem_spots[2] = -1;}
+      118:  179:					else if(pageTable[i].valid_bit && pageTable[i].page_num==3){main_mem_spots[3] = -1;}
+        -:  180:				}
+       19:  181:				for (i=0;i<4;i++){
+       18:  182:					if (main_mem_spots[i] != -1){ //if there was a spot remaining in main memory; set page num to this "i"
+        7:  183:						pageTable[page_number].page_num = i;//set page_num
+        7:  184:						pageTable[page_number].valid_bit = 1; //set valid bit to true
+        7:  185:						physical_mem.main_mem[i] = VM.virtual_mem[page_number]; //copy page from VM into main memory
+        7:  186:						physical_mem.main_mem[pageTable[page_number].page_num].addresses[index_offset] = atoi(input_array[2]);
+        7:  187:						pageTable[page_number].dirty_bit = 1;
+        7:  188:						need_to_replace_page = 0;//only if page could be placed into empty slot in main memory
+        7:  189:						increment_counters(pageTable);
+        7:  190:						break;
+        -:  191:					}
+        -:  192:				}
+        8:  193:				if(need_to_replace_page){
+        -:  194:					
+        -:  195:					//FIFO_replace(pageTable,physical_mem,VM,page_number);
+        -:  196:					int i;
+        -:  197:					int virtual_page_num;
+        -:  198:					int index_to_replace;//the index in main memory to replace (0,1,2,3)
+        1:  199:					int longest_time_stamp = 0;
+       17:  200:					for(i=0;i<16;i++){ //need to iterate through all pages in pageTable, see which valid page has the largest time
+       16:  201:						if (pageTable[i].valid_bit && pageTable[i].time_stamp > longest_time_stamp){
+        1:  202:							longest_time_stamp = pageTable[i].time_stamp;
+        1:  203:							index_to_replace = pageTable[i].page_num;
+        1:  204:							virtual_page_num = i; //the index of page in pageTable; ALSO MATCHES INDEX OF INT ARRAY IN VM.virtual_mem;
+        -:  205:						}
+        -:  206:					}
+        1:  207:					if (pageTable[virtual_page_num].dirty_bit){ //IF page copy was dirtied in the main memory, need to copy it into virtual memory first
+        1:  208:						pageTable[virtual_page_num].dirty_bit = 0;//we are gonna take care of it
+        -:  209:						//set virtual_memory page to be equal to page in physical_mem, so that the changes are kept
+        1:  210:						VM.virtual_mem[virtual_page_num]= physical_mem.main_mem[index_to_replace];  
+        -:  211:					}
+        1:  212:					pageTable[virtual_page_num].valid_bit = 0; //we are taking this page out of main memory
+        1:  213:					pageTable[virtual_page_num].page_num = pageTable[virtual_page_num].v_page_num; //set this back to v_page_num
+        1:  214:					pageTable[virtual_page_num].time_stamp = 0; //only pages in main memory have a time stamp greater than one (unless LRU and page just used)
+        -:  215:					
+        1:  216:					pageTable[page_number].valid_bit = 1; //we are putting this page into main memory
+        1:  217:					pageTable[page_number].page_num = index_to_replace; //page_num is index of open spot in main memory (still needs to be set to the same data tho)
+        1:  218:					physical_mem.main_mem[index_to_replace] = VM.virtual_mem[page_number]; //set main memory index to be this page
+        1:  219:					physical_mem.main_mem[pageTable[page_number].page_num].addresses[index_offset] = atoi(input_array[2]);
+        1:  220:					pageTable[page_number].dirty_bit = 1;
+        1:  221:					increment_counters(pageTable);
+        -:  222:					
+        -:  223:				}
+        -:  224:			}
+        -:  225:		}
+        3:  226:		else if(!strcmp(input_array[0],"showmain")){//need to print addresses(numbers) and their values of a specific page in main memory
+        2:  227:			int ppn = atoi(input_array[1]);
+        -:  228:			int virtual_page_number;
+        -:  229:			int i;
+        -:  230:			//for(i=0;i<16;i++){
+        -:  231:				//if(pageTable[i].valid_bit && pageTable[i].page_num == ppn){virtual_page_number = i;}
+        -:  232:			//}
+       18:  233:			for(i=0;i<8;i++){
+        -:  234:				//printf("%d: %d\n",(8*virtual_page_number)+i,physical_mem.main_mem[ppn].addresses[i]);
+       16:  235:				printf("%d: %d\n",(8*ppn)+i,physical_mem.main_mem[ppn].addresses[i]);
+        -:  236:			}
+        -:  237:		}
+        1:  238:		else if(!strcmp(input_array[0],"showptable")){
+        -:  239:			int i;
+       17:  240:			for(i=0;i<16;i++){
+       16:  241:				printf("%d:%d:%d:%d\n",pageTable[i].v_page_num,pageTable[i].valid_bit,pageTable[i].dirty_bit,pageTable[i].page_num);
+        -:  242:				
+        -:  243:			}
+        -:  244:		}
+       23:  245:	}
+        -:  246:}

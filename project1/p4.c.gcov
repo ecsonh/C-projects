@@ -1,0 +1,99 @@
+        -:    0:Source:p4.c
+        -:    0:Graph:p4.gcno
+        -:    0:Data:p4.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include <stdio.h>
+        -:    2:#include <stdlib.h>
+        -:    3:#include <string.h>
+        -:    4:
+        1:    5:int main()
+        -:    6:{
+        -:    7:    struct Car{
+        -:    8:        int id;
+        -:    9:        float miles;
+        -:   10:    } c1[10];
+       11:   11:    for(int i =1; i<=10;i++)
+        -:   12:    {
+       10:   13:        c1[i].id = 0;
+       10:   14:        c1[i].miles = 0.0;
+        -:   15:    }
+        -:   16:    char c[100];
+        1:   17:    int index = 1;
+        1:   18:    printf("> ");
+        1:   19:    scanf("%[^\n]%*c", c);
+        -:   20:    
+        1:   21:    char * token = strtok(c, " ");
+        3:   22:    while(strcmp(token,"quit") != 0)
+        -:   23:    {
+        1:   24:        if(strcmp(token, "AddCar") == 0)
+        -:   25:        {
+        1:   26:            int match = 0;
+        1:   27:            token = strtok(NULL, " ");
+       11:   28:            for(int i = 1; i <= 10; i++)
+        -:   29:            {
+       10:   30:                if(c1[i].id == atoi(token))
+        -:   31:                {
+    #####:   32:                    match = 1;
+        -:   33:                }
+        -:   34:            }
+        1:   35:            if(match == 1)
+        -:   36:            {
+    #####:   37:                printf("Error! Car with ID %d already exists in the database.\n", atoi(token));
+        -:   38:            }
+        -:   39:            else
+        -:   40:            {
+        -:   41:                
+        1:   42:                c1[index].id = atoi(token);
+        1:   43:                c1[index].miles = 0.0;
+        1:   44:                index++;
+        -:   45:            }
+        -:   46:            
+        -:   47:        }
+    #####:   48:        else if(strcmp(token, "AddTrip") == 0)
+        -:   49:        {
+    #####:   50:            token = strtok(NULL, " ");
+    #####:   51:            int match = 0;
+    #####:   52:            for(int i = 1; i <= 10; i++)
+        -:   53:            {
+    #####:   54:                if(c1[i].id == atoi(token))
+        -:   55:                {
+    #####:   56:                    token = strtok(NULL, " ");
+    #####:   57:                    c1[i].miles += atof(token);
+    #####:   58:                    match = 1;
+        -:   59:                }
+        -:   60:            }
+    #####:   61:            if(match == 0)
+        -:   62:            {
+    #####:   63:                printf("Error! Car with ID %d doesn’t exist in the database.\n", atoi(token));
+        -:   64:            }
+        -:   65:            
+        -:   66:        }
+    #####:   67:        else if(strcmp(token, "Reset") == 0)
+        -:   68:        {
+    #####:   69:            token = strtok(NULL, " ");
+    #####:   70:            for(int i = 1; i <= 10; i++)
+        -:   71:            {
+    #####:   72:                if(c1[i].id == atoi(token))
+        -:   73:                {
+    #####:   74:                    c1[i].miles = 0.0;
+        -:   75:                }
+        -:   76:            }
+        -:   77:        }
+    #####:   78:        else if(strcmp(token, "Display") == 0)
+        -:   79:        {
+    #####:   80:            for(int i = 1; i <= 10; i++)
+        -:   81:            {
+    #####:   82:                if(c1[i].id != 0)
+        -:   83:                {
+    #####:   84:                    printf("%d\t%.1f\n", c1[i].id, c1[i].miles);
+        -:   85:                }
+        -:   86:            }
+        -:   87:        }
+        1:   88:        printf("> ");
+        1:   89:        scanf("%[^\n]%*c", c);
+        1:   90:        token = strtok(c, " ");
+        -:   91:    }
+        1:   92:    printf("$");
+        1:   93:    return 0;
+        -:   94:}

@@ -1,0 +1,9 @@
+
+LRU
+showmain 0
+write 0 1
+write 8 2
+write 16 3
+write 24 4
+write 32 5
+quit
